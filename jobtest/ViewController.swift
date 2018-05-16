@@ -13,7 +13,6 @@ class ViewController: UIViewController {
     var firstPoint : CGPoint?
     var secondPoint : CGPoint?
     var ghostView = UIView()
-    var pointBefor : CGPoint?
     var stepPoint : CGPoint?
     
     override func viewDidLoad() {
@@ -78,6 +77,7 @@ class ViewController: UIViewController {
         let leftTop = self.createViewModel()
         leftTop.frame = CGRect(x: 0.0, y: 0.0 , width: 14.0, height: 14.0)
         leftTop.tag = 2
+        
         let resizeLeftTop = UIPanGestureRecognizer(target: self, action: #selector(resizeWithSpots(recog:)))
         leftTop.addGestureRecognizer(resizeLeftTop)
         view.addSubview(leftTop)
@@ -85,16 +85,15 @@ class ViewController: UIViewController {
         let rightTop = self.createViewModel()
         rightTop.frame = CGRect(x: view.frame.width - 14.0, y: 0.0 , width: 14.0, height: 14.0)
         rightTop.tag = 3
+        
         let resizerightTop = UIPanGestureRecognizer(target: self, action: #selector(resizeWithSpots(recog:)))
         rightTop.addGestureRecognizer(resizerightTop)
         view.addSubview(rightTop)
-//        print(view.frame)
-//        print(rightTop.frame)
-
         
         let leftBottom = self.createViewModel()
         leftBottom.frame = CGRect(x: 0.0, y: view.frame.height - 14.0 , width: 14.0, height: 14.0)
         leftBottom.tag = 4
+        
         let resizeLeftBottom = UIPanGestureRecognizer(target: self, action: #selector(resizeWithSpots(recog:)))
         leftBottom.addGestureRecognizer(resizeLeftBottom)
         view.addSubview(leftBottom)
@@ -102,6 +101,7 @@ class ViewController: UIViewController {
         let rightBottom = self.createViewModel()
         rightBottom.frame = CGRect(x: view.frame.width - 14.0, y: view.frame.height - 14.0 , width: 14.0, height: 14.0)
         rightBottom.tag = 5
+        
         let resizeRightBottom = UIPanGestureRecognizer(target: self, action: #selector(resizeWithSpots(recog:)))
         rightBottom.addGestureRecognizer(resizeRightBottom)
         view.addSubview(rightBottom)
@@ -109,6 +109,7 @@ class ViewController: UIViewController {
         let middleTop = self.createViewModel()
         middleTop.frame = CGRect(x: view.frame.width / 2 - 7.0, y: 0.0 , width: 14.0, height: 14.0)
         middleTop.tag = 6
+        
         let rotateMiddleTop = UIPanGestureRecognizer(target: self, action: #selector(resizeWithSpots(recog:)))
         middleTop.addGestureRecognizer(rotateMiddleTop)
         view.addSubview(middleTop)
@@ -142,15 +143,20 @@ class ViewController: UIViewController {
             
             let choiceTapRecog = UITapGestureRecognizer(target: self, action: #selector(moveRectangularToTop(recog:)))
             newShape.addGestureRecognizer(choiceTapRecog)
+            
             let removeRecog = UIPanGestureRecognizer(target: self, action: #selector(moveRectangular(recog:)))
             newShape.addGestureRecognizer(removeRecog)
+            
             let rotationRecog = UIRotationGestureRecognizer(target: self, action: #selector(rotationRectangular(recog:)))
             newShape.addGestureRecognizer(rotationRecog)
+            
             let deleteRecog = UITapGestureRecognizer(target: self, action: #selector(deleteRectangular(recog:)))
             deleteRecog.numberOfTapsRequired = 2
             newShape.addGestureRecognizer(deleteRecog)
+            
             let changeColorRecog = UILongPressGestureRecognizer(target: self, action: #selector(changeColorRectangular(recog:)))
             newShape.addGestureRecognizer(changeColorRecog)
+            
             let resizeRecog = UIPinchGestureRecognizer(target: self, action: #selector(resizeRegtangular(recog:)))
             newShape.addGestureRecognizer(resizeRecog)
         } else {
@@ -183,16 +189,32 @@ class ViewController: UIViewController {
     //MARK: Action funcs with Rectangular
     
     @objc func resizeRegtangular (recog: UIPinchGestureRecognizer) {
+
         guard let view = recog.view else { return }
-        view.transform = view.transform.scaledBy(x: recog.scale, y: recog.scale)
-        recog.scale = 1.0
-        changePositionOfSpots(position: view.frame)
+        let angleView = atan2(CGFloat(view.transform.b), CGFloat(view.transform.a))
+
+        if angleView == 0.0 {
+            let transformView = UIView(frame: view.frame)
+            transformView.transform = view.transform.scaledBy(x: recog.scale, y: recog.scale)
+            recog.scale = 1.0
+            view.frame = transformView.frame
+            changePositionOfSpots(position: view.frame)
+        } else {
+            view.transform = CGAffineTransform.init(rotationAngle: 0.0)
+            let transformView = UIView(frame: view.frame)
+            transformView.transform = view.transform.scaledBy(x: recog.scale, y: recog.scale)
+            recog.scale = 1.0
+            view.frame = transformView.frame
+            changePositionOfSpots(position: view.frame)
+            view.transform = CGAffineTransform.init(rotationAngle: angleView)
+        }
     }
     
     @objc func moveRectangularToTop (recog: UITapGestureRecognizer) {
         
         guard let view = recog.view else {return}
         self.view.bringSubview(toFront: view)
+
         if atan2(Double(view.transform.b), Double(view.transform.a)) == 0 {
             self.createSpots(view: view)
         } else {
@@ -217,30 +239,31 @@ class ViewController: UIViewController {
         if recog.state == UIGestureRecognizerState.changed {
 
             switch view.tag {
-            case 2: if atan2(Double((view.superview?.transform.b)!), Double((view.superview?.transform.a)!)) == 0 {
+            case 2: if atan2(CGFloat((view.superview?.transform.b)!), CGFloat((view.superview?.transform.a)!)) == 0 {
                     guard viewFrame.maxX - touchPoint.x < 100 || viewFrame.maxY - touchPoint.y < 100 else {
                         view.superview?.frame = CGRect(x: touchPoint.x, y: touchPoint.y,
                                                width: viewFrame.maxX -  touchPoint.x,
                                                height: viewFrame.maxY - touchPoint.y)
-                    guard let superView = view.superview?.frame else {return}
-                    self.changePositionOfSpots(position: superView)
-                    return
+                        guard let superView = view.superview?.frame else {return}
+                        self.changePositionOfSpots(position: superView)
+                        return
                     }
                 } else {
-                guard let superView = view.superview else {return}
-                changeSizeWithRotation(touch: touchPoint, rectangular: superView, viewTag: view.tag)
+                    guard let superView = view.superview else {return}
+                    changeSizeWithRotation(touch: touchPoint, rectangular: superView, viewTag: view.tag)
                 }
             case 3: if atan2(Double((view.superview?.transform.b)!), Double((view.superview?.transform.a)!)) == 0 {
             guard touchPoint.x - viewFrame.minX < 100 || viewFrame.maxY - touchPoint.y < 100 else {
                     view.superview?.frame = CGRect(x: viewFrame.minX, y: touchPoint.y,
                                                    width: touchPoint.x - viewFrame.minX,
                                                    height: viewFrame.maxY - touchPoint.y)
-                guard let superView = view.superview?.frame else {return}
-                self.changePositionOfSpots(position: superView)
-                return
-                }} else {
-                guard let superView = view.superview else {return}
-                changeSizeWithRotation(touch: touchPoint, rectangular: superView, viewTag: view.tag)
+                    guard let superView = view.superview?.frame else {return}
+                    self.changePositionOfSpots(position: superView)
+                    return
+                    }
+                } else {
+                    guard let superView = view.superview else {return}
+                    changeSizeWithRotation(touch: touchPoint, rectangular: superView, viewTag: view.tag)
                 }
             case 4: if atan2(Double((view.superview?.transform.b)!), Double((view.superview?.transform.a)!)) == 0 {
                 guard viewFrame.maxX - touchPoint.x < 100 || touchPoint.y - viewFrame.minY < 100 else {
@@ -250,10 +273,10 @@ class ViewController: UIViewController {
                     guard let superView = view.superview?.frame else {return}
                     self.changePositionOfSpots(position: superView)
                     return
-                    
-                }} else {
-                guard let superView = view.superview else {return}
-                changeSizeWithRotation(touch: touchPoint, rectangular: superView, viewTag: view.tag)
+                    }
+                } else {
+                    guard let superView = view.superview else {return}
+                    changeSizeWithRotation(touch: touchPoint, rectangular: superView, viewTag: view.tag)
                 }
             case 5: if atan2(Double((view.superview?.transform.b)!), Double((view.superview?.transform.a)!)) == 0 {
                 guard touchPoint.x - viewFrame.minX < 100 || touchPoint.y - viewFrame.minY < 100 else {
@@ -263,15 +286,15 @@ class ViewController: UIViewController {
                     guard let superView = view.superview?.frame else {return}
                     self.changePositionOfSpots(position: superView)
                     return
-                }} else {
-                guard let superView = view.superview else {return}
-                changeSizeWithRotation(touch: touchPoint, rectangular: superView, viewTag: view.tag)
+                    }
+                } else {
+                    guard let superView = view.superview else {return}
+                    changeSizeWithRotation(touch: touchPoint, rectangular: superView, viewTag: view.tag)
                 }
             case 6: guard let superView = view.superview else {return}
-            let angle = atan2(superView.center.y - recog.location(in: self.view).y,
-                              superView.center.x - recog.location(in: self.view).x)
-            superView.transform = CGAffineTransform.init(rotationAngle: angle)
-
+                        let angle = atan2(superView.center.y - recog.location(in: self.view).y,
+                                          superView.center.x - recog.location(in: self.view).x)
+                        superView.transform = CGAffineTransform.init(rotationAngle: angle)
             default:
                 return
             }
@@ -280,8 +303,8 @@ class ViewController: UIViewController {
     }
     
     func changeSizeWithRotation (touch: CGPoint, rectangular: UIView, viewTag: Int) {
+        
         var tag = viewTag
-
 
         if touch.x <= rectangular.center.x && touch.y <= rectangular.center.y {
             tag = 2
@@ -310,11 +333,10 @@ class ViewController: UIViewController {
 
             changePositionOfSpots(position: rectangular.frame)
             rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
-            rectangular.center = CGPoint(x: rectangular.center.x - (touch.x - rectangular.frame.origin.x), y: rectangular.center.y + (touch.y - rectangular.frame.minY))
             return
             }
-        changePositionOfSpots(position: rectangular.frame)
-        rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
+            changePositionOfSpots(position: rectangular.frame)
+            rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
 
         case 3: guard touch.x - rectangular.frame.minX < 100 || rectangular.frame.maxY - touch.y < 100 else {
             guard let point = self.stepPoint else {return}
@@ -327,9 +349,9 @@ class ViewController: UIViewController {
             changePositionOfSpots(position: rectangular.frame)
             rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
             return
-        }
-        changePositionOfSpots(position: rectangular.frame)
-        rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
+            }
+            changePositionOfSpots(position: rectangular.frame)
+            rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
             
         case 4: guard rectangular.frame.maxX - touch.x < 100 || touch.y - rectangular.frame.minY < 100 else {
             guard let point = self.stepPoint else {return}
@@ -342,9 +364,9 @@ class ViewController: UIViewController {
             changePositionOfSpots(position: rectangular.frame)
             rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
             return
-        }
-        changePositionOfSpots(position: rectangular.frame)
-        rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
+            }
+            changePositionOfSpots(position: rectangular.frame)
+            rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
             
         case 5: guard touch.x - rectangular.frame.minX < 100 || touch.y - rectangular.frame.minY < 100 else {
             guard let point = self.stepPoint else {return}
@@ -357,9 +379,9 @@ class ViewController: UIViewController {
             changePositionOfSpots(position: rectangular.frame)
             rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
             return
-        }
-        changePositionOfSpots(position: rectangular.frame)
-        rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
+            }
+            changePositionOfSpots(position: rectangular.frame)
+            rectangular.transform = CGAffineTransform.init(rotationAngle: angleView)
             
         default:
             return
@@ -377,7 +399,9 @@ class ViewController: UIViewController {
     @objc func changeColorRectangular (recog: UIGestureRecognizer) {
         guard let view = recog.view else {return}
         if recog.state == UIGestureRecognizerState.began {
-           view.backgroundColor = UIColor(red: CGFloat(arc4random()) / CGFloat(UInt32.max), green: CGFloat(arc4random()) / CGFloat(UInt32.max), blue: CGFloat(arc4random()) / CGFloat(UInt32.max), alpha: 1.0)
+           view.backgroundColor = UIColor(red: CGFloat(arc4random()) / CGFloat(UInt32.max),
+                                          green: CGFloat(arc4random()) / CGFloat(UInt32.max),
+                                          blue: CGFloat(arc4random()) / CGFloat(UInt32.max), alpha: 1.0)
         }
     }
     
@@ -395,7 +419,6 @@ class ViewController: UIViewController {
     @objc func moveRectangular (recog: UIPanGestureRecognizer) {
         guard let view = recog.view else {return}
         self.view.bringSubview(toFront: view)
-        
         if recog.state == UIGestureRecognizerState.changed {
             view.center = CGPoint(x: recog.location(in: self.view).x, y: recog.location(in: self.view).y)
         }
